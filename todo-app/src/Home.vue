@@ -1,11 +1,7 @@
 <template>
   <div id="app">
     <Title />
-    <label v-for="[state, text] in Array.from(labels)" :key="state">
-      <input type="radio" v-model="current" :value="state" />
-      {{ text }}
-    </label>
-    {{ filteredTodos.length }} 件を表示中
+    <Status todoProp="todos" @called-status="onTodoChanged" />
     <table>
       <thead>
         <tr>
@@ -16,12 +12,12 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="todo in filteredTodos" :key="todo.id">
+        <tr v-for="todo in todos" :key="todo.id">
           <th>{{ todo.id }}</th>
           <td>{{ todo.name }}</td>
           <td class="state">
             <button @click="toggleState(todo)">
-              {{ labels.get(todo.state) }}
+              <!-- {{ labels.get(todo.state) }} -->
             </button>
           </td>
           <td class="button">
@@ -47,43 +43,33 @@
 
 <script lang="ts">
 import { Component, Vue, Watch } from "vue-property-decorator";
-import TodoStorage from "@/todoStorage";
+import TodoStorage from "@/todoStorage.ts";
 import { State, TodoItem } from "@/todoItem.ts";
 import Title from "@/components/Title.vue";
+import Status from "@/components/Status.vue";
 
 const todoStorage = new TodoStorage();
 
 @Component({
   components: {
-    Title
+    Title,
+    Status
   }
 })
-export default class App extends Vue {
-  private todos: TodoItem[] = [];
+export default class Home extends Vue {
+  // TODO一覧
+  public todos: TodoItem[] = [];
 
-  private labels = new Map<State, string>([
-    [State.All, "全て"],
-    [State.Working, "作業中"],
-    [State.Done, "完了"]
-  ]);
-
-  private current: State = State.All;
-
-  private get filteredTodos() {
-    return this.todos.filter(t =>
-      this.current === State.All ? true : this.current === t.state
-    );
-  }
-
-  created() {
+  // 表示時に localStorage の内容を表示
+  private created() {
     this.todos = todoStorage.fetchAll();
   }
 
+  //↓input
+  // TODO追加する
   private addTodo() {
     const name = this.$refs.name as HTMLInputElement;
-    if (!name.value.length) {
-      return;
-    }
+    if (!name.value.length) return;
     this.todos.push({
       id: todoStorage.nextId - 1,
       name: name.value,
@@ -92,89 +78,24 @@ export default class App extends Vue {
     name.value = "";
   }
 
+  //↓list
+  // TODOを削除する
   private removeTodo(todo: TodoItem) {
     const index: number = this.todos.indexOf(todo);
     this.todos.splice(index, 1);
   }
 
+  // TODOの作業中・完了を切り替える
   private toggleState(todo: TodoItem) {
     todo.state = todo.state === State.Working ? State.Done : State.Working;
   }
 
+  //↓
+  // TODO一覧が変更される度、ストレージに保存する
   @Watch("todos", { deep: true })
-  private onTodoChanged(todos: TodoItem[]) {
+  public onTodoChanged(todos: TodoItem[]) {
+    this.todos = todos;
     todoStorage.save(todos);
   }
 }
 </script>
-
-<style lang="scss">
-* {
-  box-sizing: border-box;
-}
-
-#app {
-  max-width: 640px;
-  margin: 0 auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead th {
-  border-bottom: 2px solid #0099e4; /*#d31c4a */
-  color: #0099e4;
-}
-
-th,
-th {
-  padding: 0 8px;
-  line-height: 40px;
-}
-
-thead th.id {
-  width: 50px;
-}
-
-thead th.state {
-  width: 100px;
-}
-
-thead th.button {
-  width: 60px;
-}
-
-tbody td.button,
-tbody td.state {
-  text-align: center;
-}
-
-tbody tr td,
-tbody tr th {
-  border-bottom: 1px solid #ccc;
-  transition: All 0.4s;
-}
-
-tbody tr.Done td,
-tbody tr.Done th {
-  background: #f8f8f8;
-  color: #bbb;
-}
-
-tbody tr:hover td,
-tbody tr:hover th {
-  background: #f4fbff;
-}
-
-button {
-  border: none;
-  border-radius: 20px;
-  line-height: 24px;
-  padding: 0 8px;
-  background: #0099e4;
-  color: #fff;
-  cursor: pointer;
-}
-</style>

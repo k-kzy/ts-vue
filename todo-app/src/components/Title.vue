@@ -24,7 +24,7 @@ export default class Title extends Vue {
 
   span {
     font-style: italic;
-    margin-left: 20px;
+    margin-left: 40px;
   }
 }
 </style>
